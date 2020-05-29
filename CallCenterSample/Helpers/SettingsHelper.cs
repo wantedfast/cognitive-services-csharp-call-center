@@ -102,10 +102,10 @@ namespace CallCenterSample.Helpers
                 this.TextAnalyticsApiKey = value.ToString();
             }
 
-            value = ApplicationData.Current.RoamingSettings.Values["TextAnalyticsApiKeyRegion"];
+            value = ApplicationData.Current.RoamingSettings.Values["TextAnalyticsEndpoint"];
             if (value != null)
             {
-                this.TextAnalyticsApiKeyRegion = value.ToString();
+                this.TextAnalyticsEndpoint = value.ToString();
             }
 
             value = ApplicationData.Current.RoamingSettings.Values["TranslatorTextApiKey"];
@@ -141,14 +141,14 @@ namespace CallCenterSample.Helpers
             }
         }
 
-        private string textAnalyticsApiKeyRegion = "westus";
-        public string TextAnalyticsApiKeyRegion
+        private string _textAnalyticsEndpoint = string.Empty;
+        public string TextAnalyticsEndpoint
         {
-            get { return textAnalyticsApiKeyRegion; }
+            get { return _textAnalyticsEndpoint; }
             set
             {
-                this.textAnalyticsApiKeyRegion = value;
-                this.OnSettingChanged("TextAnalyticsApiKeyRegion", value);
+                this._textAnalyticsEndpoint = value;
+                this.OnSettingChanged("TextAnalyticsEndpoint", value);
             }
         }
 
@@ -171,28 +171,6 @@ namespace CallCenterSample.Helpers
             {
                 this.showDebugInfo = value;
                 this.OnSettingChanged("ShowDebugInfo", value);
-            }
-        }
-
-        public string[] AvailableApiRegions
-        {
-            get
-            {
-                return new string[]
-                {
-                    "westus",
-                    "westus2",
-                    "eastus",
-                    "eastus2",
-                    "westcentralus",
-                    "southcentralus",
-                    "westeurope",
-                    "northeurope",
-                    "southeastasia",
-                    "eastasia",
-                    "australiaeast",
-                    "brazilsouth"
-                };
             }
         }
     }

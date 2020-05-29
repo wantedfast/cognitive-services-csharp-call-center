@@ -31,14 +31,12 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // 
 
-using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
-using System.Text;
-using System.Threading.Tasks;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net;
-using Newtonsoft.Json.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace CallCenterSample.Helpers
 {
@@ -96,7 +94,7 @@ namespace CallCenterSample.Helpers
                 string translation = string.Empty;
                 if (data.translations != null)
                 {
-                    translation = (string) data.translations[0].text;
+                    translation = (string)data.translations[0].text;
                 }
 
                 if (data.error != null)

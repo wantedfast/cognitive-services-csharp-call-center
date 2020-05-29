@@ -31,48 +31,47 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // 
 
-using Microsoft.Azure.CognitiveServices.Language.TextAnalytics;
-using Microsoft.Azure.CognitiveServices.Language.TextAnalytics.Models;
-using Microsoft.Rest;
+using Azure;
+using Azure.AI.TextAnalytics;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Net.Http;
-using System.Net.Http.Headers;
 
 namespace CallCenterSample.Helpers
 {
     public class TextAnalyticsHelper
     {
-        private static ITextAnalyticsClient AnalyticsClient { get; set; }
+        private static TextAnalyticsClient TextAnalyticsClient;
 
-        private static string apiKey;
+        private static string _apiKey;
+        private static string _endpoint;
 
         public static string ApiKey
         {
-            get { return apiKey; }
+            get { return _apiKey; }
+
             set
             {
-                var changed = apiKey != value;
-                apiKey = value;
-                if (changed)
+                bool isChanged = _apiKey != value;
+                _apiKey = value;
+
+                if (isChanged)
                 {
                     InitializeTextAnalyticsClient();
                 }
             }
         }
 
-        private static string apiKeyRegion;
-        public static string ApiKeyRegion
+        public static string Endpoint
         {
-            get { return apiKeyRegion; }
+            get { return _endpoint; }
+
             set
             {
-                var changed = apiKeyRegion != value;
-                apiKeyRegion = value;
-                if (changed)
+                bool isChanged = _endpoint != value;
+                _endpoint = value;
+
+                if (isChanged)
                 {
                     InitializeTextAnalyticsClient();
                 }
@@ -81,110 +80,47 @@ namespace CallCenterSample.Helpers
 
         private static void InitializeTextAnalyticsClient()
         {
-            if (!string.IsNullOrEmpty(ApiKey) && !string.IsNullOrEmpty(ApiKeyRegion))
-            {
-                AnalyticsClient = new TextAnalyticsClient(new ApiKeyServiceClientCredentials())
-                {
-                    Endpoint = string.Format("https://{0}.api.cognitive.microsoft.com", ApiKeyRegion)
-                };
-            }
-        }
-
-        /// <summary>
-        /// Container for subscription credentials
-        /// </summary>
-        class ApiKeyServiceClientCredentials : ServiceClientCredentials
-        {
-            public override Task ProcessHttpRequestAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-            {
-                request.Headers.Add("Ocp-Apim-Subscription-Key", ApiKey);
-                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                return base.ProcessHttpRequestAsync(request, cancellationToken);
-            }
+            Argument.AssertNotNullOrEmpty(Endpoint, nameof(Endpoint));
+            Argument.AssertNotNullOrEmpty(ApiKey, nameof(ApiKey));
+            TextAnalyticsClient = new TextAnalyticsClient(new Uri(Endpoint), new AzureKeyCredential(ApiKey));
         }
 
         public static async Task<DetectLanguageResult> GetDetectedLanguageAsync(string input)
         {
             DetectLanguageResult languageResult = new DetectLanguageResult() { Language = new Dictionary<string, string>() };
+            Argument.AssertNotNullOrEmpty(input, nameof(input));
 
-            if (!string.IsNullOrEmpty(input))
-            {
-                LanguageBatchResult result = await AnalyticsClient.DetectLanguageAsync(new BatchInput(
-                    new List<Input>()
-                    {
-                        new Input("0", input)
-                    }));
+            DetectedLanguage result = await TextAnalyticsClient.DetectLanguageAsync(input);
 
-                if (result.Documents != null)
-                {
-                    languageResult.Language.Add("iso6391Name", result.Documents[0].DetectedLanguages[0].Iso6391Name);
-                    languageResult.Language.Add("name", result.Documents[0].DetectedLanguages[0].Name);
-                    languageResult.Language.Add("score", result.Documents[0].DetectedLanguages[0].Score.ToString());
-                }
-
-                if (result.Errors != null)
-                {
-                    // Just return the empty Dictionary
-                }
-            }
+            languageResult.Language.Add("iso6391Name", result.Iso6391Name);
+            languageResult.Language.Add("name", result.Name);
+            languageResult.Language.Add("score", result.ConfidenceScore.ToString());
 
             return languageResult;
         }
 
-        public static async Task<SentimentResult> GetTextSentimentAsync(string input, string language = "en")
+        public static async Task<SentimentResult> GetTextSentimentAsync(string input)
         {
             SentimentResult sentimentResult = new SentimentResult() { Score = 0.5 };
+            Argument.AssertNotNullOrEmpty(input, nameof(input));
 
-            if (!string.IsNullOrEmpty(input))
-            {
-                SentimentBatchResult result = await AnalyticsClient.SentimentAsync(new MultiLanguageBatchInput(
-                    new List<MultiLanguageInput>()
-                    {
-                        new MultiLanguageInput(language, "0", input)
-                    }));
+            DocumentSentiment result = await TextAnalyticsClient.AnalyzeSentimentAsync(input, "en");
 
-                if (result.Documents != null)
-                {
-                    sentimentResult.Score = (double) result.Documents[0].Score;
-                }
-
-                if (result.Errors != null)
-                {
-                    // Just return the neutral value
-                }
-            }
+            sentimentResult.Score = result.ConfidenceScores.Neutral;
 
             return sentimentResult;
         }
 
-        public static async Task<KeyPhrasesResult> GetKeyPhrasesAsync(string input, string language = "en")
+        public static async Task<KeyPhrasesResult> GetKeyPhrasesAsync(string input)
         {
-            KeyPhrasesResult keyPhrasesResult = new KeyPhrasesResult() { KeyPhrases = Enumerable.Empty<string>() };
+            KeyPhrasesResult keyPhrasesResult = new KeyPhrasesResult() { KeyPhrases = new List<string>() };
+            Argument.AssertNotNullOrEmpty(input, nameof(input));
 
-            if (!string.IsNullOrEmpty(input))
+            KeyPhraseCollection result = await TextAnalyticsClient.ExtractKeyPhrasesAsync(input, "en");
+
+            foreach (string keyPhrase in result)
             {
-                KeyPhraseBatchResult result = await AnalyticsClient.KeyPhrasesAsync(new MultiLanguageBatchInput(
-                    new List<MultiLanguageInput>()
-                    {
-                        new MultiLanguageInput(language, "0", input)
-                    }));
-
-                if (result.Documents != null)
-                {
-                    List<string> phrases = new List<string>();
-
-                    foreach (string keyPhrase in result.Documents[0].KeyPhrases)
-                    {
-                        phrases.Add(keyPhrase);
-                    }
-
-                    keyPhrasesResult.KeyPhrases = phrases;
-                }
-
-                if (result.Errors != null)
-                {
-                    // Just return the empty IEnumerable
-                }
+                keyPhrasesResult.KeyPhrases.Add(keyPhrase);
             }
 
             return keyPhrasesResult;
@@ -203,7 +139,22 @@ namespace CallCenterSample.Helpers
 
     public class KeyPhrasesResult
     {
-        public IEnumerable<string> KeyPhrases { get; set; }
+        public IList<string> KeyPhrases { get; set; }
     }
 
+    public class Argument
+    {
+        public static void AssertNotNullOrEmpty(string value, string name)
+        {
+            if (value is null)
+            {
+                throw new ArgumentNullException(name);
+            }
+
+            if (value.Length == 0)
+            {
+                throw new ArgumentException($"{name} cannot be empty.");
+            }
+        }
+    }
 }
