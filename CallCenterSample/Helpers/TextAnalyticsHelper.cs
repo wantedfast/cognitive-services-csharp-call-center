@@ -99,12 +99,12 @@ namespace CallCenterSample.Helpers
             return languageResult;
         }
 
-        public static async Task<SentimentResult> GetTextSentimentAsync(string input)
+        public static async Task<SentimentResult> GetTextSentimentAsync(string input, string language = "en")
         {
             SentimentResult sentimentResult = new SentimentResult() { Score = 0.5 };
             Argument.AssertNotNullOrEmpty(input, nameof(input));
 
-            DocumentSentiment result = await TextAnalyticsClient.AnalyzeSentimentAsync(input, "en");
+            DocumentSentiment result = await TextAnalyticsClient.AnalyzeSentimentAsync(input, language);
 
             sentimentResult.Score = result.ConfidenceScores.Neutral;
 
